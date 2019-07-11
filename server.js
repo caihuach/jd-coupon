@@ -1,9 +1,19 @@
+const Papa = require('papaparse');
+const fs = require('fs-extra');
 const puppeteer = require('puppeteer-core');
 
 const discountObj = {};
 let discountArr = [];
 
-const url = 'https://search.jd.com/Search?coupon_batch=239432678&coupon_id=37426841159';
+const url = 'https://search.jd.com/Search?coupon_batch=239432678&coupon_id=37486552999';
+
+function getCouponInfo(page) {
+  return page.evaluate(() => {
+    const [div] = document.querySelectorAll('.flbar-coupon-info');
+
+    return div.innerText;
+  })
+}
 
 async function autoScroll(page) {
   await page.evaluate(async () => {
@@ -19,7 +29,7 @@ async function autoScroll(page) {
           clearInterval(timer);
           resolve();
         }
-      }, 200)
+      }, 100)
     })
   });
 }
@@ -40,14 +50,16 @@ function getRows4thisPage(page) {
         parentNode,
         innerText: discountName
       } = node;
-      const {children} = parentNode.parentNode;
+      const { children } = parentNode.parentNode;
 
       //找到有href的pName
       let pName;
+      let pPrice;
       for (const child of children) {
-        if (child.className.includes('p-name')) {
+        if (child.className.includes('p-price')) {
+          pPrice = child;
+        } else if (child.className.includes('p-name')) {
           pName = child;
-          break;
         }
       }
       if (!pName) {
@@ -61,6 +73,7 @@ function getRows4thisPage(page) {
           rows.push({
             href,
             name: child.innerText,
+            price: parseFloat(pPrice.lastElementChild.innerText.replace('￥', '')),
             discountName,
           });
           break;
@@ -87,7 +100,8 @@ function convertArr(discountArr) {
     const {
       href,
       name,
-      discountName
+      price,
+      discountName,
     } = discount;
 
     if (!Array.isArray(discountObj[discountName])) {
@@ -95,6 +109,7 @@ function convertArr(discountArr) {
     }
     discountObj[discountName].push({
       href,
+      price,
       name,
     });
   }
@@ -110,9 +125,14 @@ async function main() {
   });
 
   const page = await browser.newPage();
-  await page.goto(url, {waitUntil: 'networkidle2'});
+  await page.goto(url, { waitUntil: 'networkidle2' });
 
+  const u = new URL(url);
+  const couponId = u.searchParams.get("coupon_id");
 
+  // const couponInfo = await getCouponInfo(page);
+  const couponDir = `./csv/${couponId}`;
+  fs.ensureDirSync(couponDir);
   //todo:怎么翻页
   //while loop，按右键可以翻页，最后一页就会disabled
 
@@ -134,15 +154,16 @@ async function main() {
     }
     //5. 翻页
     await Promise.all([
-      page.waitForNavigation({waitUntil: 'networkidle2'}),
+      page.waitForNavigation({ waitUntil: 'networkidle2' }),
       page.keyboard.press('ArrowRight'),
     ])
   }
 
-
   convertArr(discountArr);
   console.dir(discountObj);
-
+  for (const [key, value] of Object.entries(discountObj)) {
+    fs.writeFileSync(`${couponDir}/${key}.csv`, Papa.unparse(value));
+  }
 
   // await browser.close();
 }
