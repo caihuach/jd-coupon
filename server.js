@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer-core');
 const discountObj = {};
 let discountArr = [];
 
-const url = 'https://search.jd.com/Search?coupon_batch=239432678&coupon_id=37486552999';
+const url = 'https://search.jd.com/Search?coupon_batch=236874742&coupon_id=37856523367';
 
 function getCouponInfo(page) {
   return page.evaluate(() => {
@@ -38,7 +38,6 @@ function getRows4thisPage(page) {
   return page.evaluate(() => {
     const lis = document.querySelectorAll('li.gl-item');
     console.log(lis.length);
-
 
     const rows = [];
     const nodeList = document.querySelectorAll('li.gl-item i[data-tips="本商品参与满减促销"]');
@@ -125,6 +124,7 @@ async function main() {
   });
 
   const page = await browser.newPage();
+  await page.setGeolocation({ latitude: 22.32, longitude: 114.03 });
   await page.goto(url, { waitUntil: 'networkidle2' });
 
   const u = new URL(url);
@@ -132,8 +132,7 @@ async function main() {
 
   // const couponInfo = await getCouponInfo(page);
   const couponDir = `./csv/${couponId}`;
-  fs.ensureDirSync(couponDir);
-  //todo:怎么翻页
+  fs.emptyDirSync(couponDir);
   //while loop，按右键可以翻页，最后一页就会disabled
 
   while (true) {
