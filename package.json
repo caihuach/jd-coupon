@@ -17,5 +17,10 @@
     "papaparse": "^5.0.0",
     "puppeteer-core": "^1.18.0",
     "xlsx": "^0.14.3"
+  },
+  "devDependencies": {
+    "eslint": "^6.2.2",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.18.2"
   }
 }
